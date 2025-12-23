@@ -20,23 +20,21 @@ def coord(archivo, radius=0.4, frac_min=0.8):
     n_y, n_x = imagen_ref.shape
     
     centros_validos = []
-    for j in range(1, n_y-1, 3):
-        for i in range(1, n_x-1, 3):
-            vecinos = imagen_ref[j-1:j+2, i-1:i+2]
-            if not np.isfinite(vecinos[1, 1]) or vecinos[1, 1] <= 0:
+    for j in range(n_y):
+        for i in range(n_x):
+            if imagen_ref[j, i] <= 0 or not np.isfinite(imagen_ref[j, i]):
                 continue
 
-            position = SkyCoord.from_pixel(i, j, wcs) 
+            position = SkyCoord.from_pixel(i + 1, j + 1, wcs) 
             aperture = SkyCircularAperture(position, r=radius * u.arcsec)
             pix_aperture = aperture.to_pixel(wcs)
             mask = pix_aperture.to_mask(method='center')
-            cutout = mask.cutout(imagen_ref)
-            
-            if cutout is None:
+            ap_mask = mask.to_image(imagen_ref.shape)
+            inside = ap_mask > 0
+            validos = np.isfinite(imagen_ref) & (imagen_ref > 0)
+
+            if np.sum(inside) == 0:
                 continue
-            
-            inside = mask.data > 0
-            validos = np.isfinite(cutout) & (cutout > 0)
 
             frac_valida = np.sum(inside & validos) / np.sum(inside)
 
